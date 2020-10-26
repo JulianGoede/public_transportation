@@ -19,7 +19,6 @@ def configure_connector():
         logging.debug("connector already created skipping recreation")
         return
 
-    logger.info("connector code not completed skipping connector creation")
     resp = requests.post(
         KAFKA_CONNECT_URL,
         headers={"Content-Type": "application/json"},

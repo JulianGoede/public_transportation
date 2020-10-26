@@ -9,13 +9,14 @@ from confluent_kafka.avro import AvroProducer
 
 logger = logging.getLogger(__name__)
 
+BROKER_URLS = os.getenv("BROKER_URLS",
+                        "PLAINTEXT://localhost:9092,PLAINTEXT://localhost:9093,PLAINTEXT://localhost:9094")
+
+SCHEMA_REGISTRY_URL = os.getenv("SCHEMA_REGISTRY", "http://localhost:8081")
+
 
 class Producer:
     """Defines and provides common functionality amongst Producers"""
-    BROKER_URLS = os.getenv("BROKER_URLS",
-                            "PLAINTEXT://localhost:9092,PLAINTEXT://localhost:9093,PLAINTEXT://localhost:9094")
-
-    SCHEMA_REGISTRY_URL = os.getenv("SCHEMA_REGISTRY", "http://localhost:8081")
 
     # Tracks existing topics across all Producer instances
     existing_topics = set([])
@@ -35,7 +36,7 @@ class Producer:
         self.num_partitions = num_partitions
         self.num_replicas = num_replicas
         self.broker_properties = {
-            'bootstrap.servers': Producer.BROKER_URLS,
+            'bootstrap.servers': BROKER_URLS,
             'client.id': 'com.udacity.producers.models.producer',
             # config might be optimized
             "linger.ms": 1000,
@@ -48,11 +49,10 @@ class Producer:
             self.create_topic()
             Producer.existing_topics.add(self.topic_name)
 
-        # TODO: Configure the AvroProducer
         self.producer = AvroProducer(
             {
-                'bootstrap.servers': Producer.BROKER_URLS,
-                "schema.registry.url": Producer.SCHEMA_REGISTRY_URL
+                'bootstrap.servers': BROKER_URLS,
+                "schema.registry.url": SCHEMA_REGISTRY_URL
             },
             default_key_schema=key_schema,
             default_value_schema=value_schema
@@ -66,7 +66,7 @@ class Producer:
         """Creates the producer topic if it does not already exist"""
         client = AdminClient(conf=self.broker_properties)
         if not self.topic_exists(client):
-            logger.debug("topic %s does not exist for broker %s - create topic", self.topic_name, Producer.BROKER_URLS)
+            logger.info("topic %s does not exist for broker %s - create topic", self.topic_name, BROKER_URLS)
             try:
                 client.create_topics([NewTopic(topic=self.topic_name,
                                                num_partitions=self.num_partitions,
@@ -74,21 +74,11 @@ class Producer:
             except:
                 logger.error("failed to create topic %s", self.topic_name)
         else:
-            logger.debug("topic %s exists for broker %s - skip topic creation", self.topic_name, Producer.BROKER_URLS)
+            logger.info("topic %s exists for broker %s - skip topic creation", self.topic_name, BROKER_URLS)
 
     def close(self):
         logger.info("shutting down producer")
-        try:
-            client = AdminClient(conf=self.broker_properties)
-            if self.topic_exists(client):
-                logger.info("delete topic %s", self.topic_name)
-                client.delete_topics(topics=[self.topic_name])
-            else:
-                logger.info("broker has no topic %s - skip removing topic from broker")
-            if self.topic_name in Producer.existing_topics:
-                Producer.existing_topics.remove(self.topic_name)
-        except:
-            logger.error("failure during producer shutdown")
+        self.producer.flush()
 
     def time_millis(self):
         """Use this function to get the key for Kafka Events"""
