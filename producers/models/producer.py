@@ -59,12 +59,12 @@ class Producer:
         )
 
     def topic_exists(self, client):
-        topic_metadata = client.list_topics(topic=self.topic_name, timeout=5)
+        topic_metadata = client.list_topics(timeout=5)
         return self.topic_name in set(t.topic for t in iter(topic_metadata.topics.values()))
 
     def create_topic(self):
         """Creates the producer topic if it does not already exist"""
-        client = AdminClient(conf=self.broker_properties)
+        client = AdminClient(self.broker_properties)
         if not self.topic_exists(client):
             logger.info("topic %s does not exist for broker %s - create topic", self.topic_name, BROKER_URLS)
             try:

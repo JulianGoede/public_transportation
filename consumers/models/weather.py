@@ -1,7 +1,6 @@
 """Contains functionality related to Weather"""
 import logging
 
-
 logger = logging.getLogger(__name__)
 
 
@@ -15,9 +14,6 @@ class Weather:
 
     def process_message(self, message):
         """Handles incoming weather data"""
-        logger.info("weather process_message is incomplete - skipping")
-        #
-        #
-        # TODO: Process incoming weather messages. Set the temperature and status.
-        #
-        #
+        k, v = message.key(), message.value()
+        self.temperature = v['temperature']
+        self.status = v['status']
